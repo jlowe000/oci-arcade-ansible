@@ -1,0 +1,62 @@
+- name : Installing oci-arcade
+  collections:
+    - oracle.oci
+  connection: local
+  hosts: localhost
+  vars_files:
+    - vars.yaml
+  tasks:
+    - name: Create github repo provider
+      oci_resource_manager_configuration_source_provider:
+        display_name: "OCI Arcade Repository"
+        description: "built by Ansible"
+        compartment_id: "{{compartment_ocid}}"
+        config_profile_name: "{{profile}}"
+        config_source_provider_type: GITHUB_ACCESS_TOKEN
+        api_endpoint: https://github.com
+        access_token: "{{access_token}}"
+      register: github_id
+      tags:
+        - repository
+    - name: Create oci-arcade Stack
+      oci_resource_manager_stack:
+        compartment_id: "{{compartment_ocid}}"
+        config_profile_name: "{{profile}}"
+        display_name: "OCI Arcade Stack"
+        description: "built by Ansible"
+        terraform_version: "0.13.x"
+        config_source:
+          config_source_type: "GIT_CONFIG_SOURCE"
+          configuration_source_provider_id: "{{github_id.configuration_source_provider.id}}"
+          repository_url: "https://github.com/jlowe000/oci-arcade-tf"
+          branch_name: "{{git_branch}}"
+        variables: { "compartment_ocid": "{{compartment_ocid}}",
+                     "tenancy_ocid": "{{tenancy_ocid}}",
+                     "region": "{{region}}",
+                     "bucket_ns": "{{bucket_ns}}",
+                     "apigw-dn": "{{apigw_dn}}",
+                     "custom_ssh_key": "{{custom_ssh_key}}",
+                     "compute_shape": "{{compute_shape}}",
+                     "arcade-web_source_image_id": "{{arcade_web_source_image_id}}",
+                     "is_free_tier": "{{is_free_tier}}",
+                     "custom_adb_admin_password": "{{custom_adb_admin_password}}",
+                     "enable_api_key": "{{enable_api_key}}",
+                     "user_id": "{{user_id}}",
+                     "git_repo": "https://github.com/jlowe000/oci-arcade.git --branch {{git_branch}}" }
+      register: result
+    - name: Dump result
+      debug: 
+        msg: '{{result}}'
+    - name: apply ORM stack
+      oci_resource_manager_job:
+        config_profile_name: "{{profile}}"
+        job_operation_details:
+          execution_plan_strategy: AUTO_APPROVED
+          operation: APPLY
+        stack_id: "{{result.stack.id}}"
+      async: 10
+      poll: 0
+      register: result
+    - name: Dump job result
+      debug:
+        msg: '{{result}}'

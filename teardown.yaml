@@ -3,11 +3,13 @@
     - oracle.oci
   connection: local
   hosts: localhost
+  vars_files:
+    - vars.yaml
   tasks:
     - name: get all objects from object storage
       oci_object_storage_object_facts:
-        config_profile_name: "DEFAULT"
-        namespace_name: "BUCKET_NS"
+        config_profile_name: "{{profile}}"
+        namespace_name: "{{bucket_ns}}"
         bucket_name: "oci-arcade"
       register: res_os_objects
     - name: Dump object result
@@ -15,8 +17,8 @@
         msg: '{{res_os_objects}}'
     - name: Task to DELETE all objects in bucket
       oci_object_storage_object:
-        config_profile_name: "DEFAULT"
-        namespace_name: "BUCKET_NS"
+        config_profile_name: "{{profile}}"
+        namespace_name: "{{bucket_ns}}"
         bucket_name: "oci-arcade"
         object_name: "{{ item.name }}"
         state: absent
@@ -25,15 +27,13 @@
         - "{{ res_os_objects.objects }}"
     - name: get ORM stack 
       oci_resource_manager_stack_facts:
-        config_profile_name: "DEFAULT"
-        compartment_id: "ocid1.compartment.oc1..EXAMPLE"
+        config_profile_name: "{{profile}}"
+        compartment_id: "{{compartment_ocid}}"
         display_name: "OCI Arcade Stack"
       register: res_orm_stacks
-      tags:
-        - resources
     - name: destroy ORM stack 
       oci_resource_manager_job:
-        config_profile_name: "DEFAULT"
+        config_profile_name: "{{profile}}"
         job_operation_details:
           execution_plan_strategy: AUTO_APPROVED
           operation: DESTROY
@@ -47,22 +47,16 @@
         msg: '{{result}}'
     - name: delete ORM stack 
       oci_resource_manager_stack:
-        config_profile_name: "DEFAULT"
+        config_profile_name: "{{profile}}"
         stack_id: "{{res_orm_stacks.stacks[0].id}}"
         state: "absent"
-      tags:
-        - resources
     - name: get git repo provider
       oci_resource_manager_configuration_source_provider_facts:
-        config_profile_name: "DEFAULT"
-        compartment_id: "ocid1.compartment.oc1..EXAMPLE"
+        config_profile_name: "{{profile}}"
+        compartment_id: "{{compartment_ocid}}"
       register: res_config_sources
-      tags:
-        - resources
     - name: delete git repo provider
       oci_resource_manager_configuration_source_provider:
-        config_profile_name: "DEFAULT"
+        config_profile_name: "{{profile}}"
         configuration_source_provider_id: "{{res_config_sources.configuration_source_providers[0].id}}"
         state: "absent"
-      tags:
-        - resources
