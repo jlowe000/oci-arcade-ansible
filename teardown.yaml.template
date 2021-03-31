@@ -1,0 +1,68 @@
+- name : Uninstalling oci-arcade
+  collections:
+    - oracle.oci
+  connection: local
+  hosts: localhost
+  tasks:
+    - name: get all objects from object storage
+      oci_object_storage_object_facts:
+        config_profile_name: "DEFAULT"
+        namespace_name: "BUCKET_NS"
+        bucket_name: "oci-arcade"
+      register: res_os_objects
+    - name: Dump object result
+      debug: 
+        msg: '{{res_os_objects}}'
+    - name: Task to DELETE all objects in bucket
+      oci_object_storage_object:
+        config_profile_name: "DEFAULT"
+        namespace_name: "BUCKET_NS"
+        bucket_name: "oci-arcade"
+        object_name: "{{ item.name }}"
+        state: absent
+      register: result
+      with_items:
+        - "{{ res_os_objects.objects }}"
+    - name: get ORM stack 
+      oci_resource_manager_stack_facts:
+        config_profile_name: "DEFAULT"
+        compartment_id: "ocid1.compartment.oc1..EXAMPLE"
+        display_name: "OCI Arcade Stack"
+      register: res_orm_stacks
+      tags:
+        - resources
+    - name: destroy ORM stack 
+      oci_resource_manager_job:
+        config_profile_name: "DEFAULT"
+        job_operation_details:
+          execution_plan_strategy: AUTO_APPROVED
+          operation: DESTROY
+        stack_id: "{{item.id}}"
+        wait_timeout: 1800
+      register: result
+      with_items:
+        - "{{ res_orm_stacks.stacks }}"
+    - name: Dump job result
+      debug: 
+        msg: '{{result}}'
+    - name: delete ORM stack 
+      oci_resource_manager_stack:
+        config_profile_name: "DEFAULT"
+        stack_id: "{{res_orm_stacks.stacks[0].id}}"
+        state: "absent"
+      tags:
+        - resources
+    - name: get git repo provider
+      oci_resource_manager_configuration_source_provider_facts:
+        config_profile_name: "DEFAULT"
+        compartment_id: "ocid1.compartment.oc1..EXAMPLE"
+      register: res_config_sources
+      tags:
+        - resources
+    - name: delete git repo provider
+      oci_resource_manager_configuration_source_provider:
+        config_profile_name: "DEFAULT"
+        configuration_source_provider_id: "{{res_config_sources.configuration_source_providers[0].id}}"
+        state: "absent"
+      tags:
+        - resources
