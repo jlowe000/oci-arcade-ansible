@@ -16,6 +16,7 @@ At the moment:
 Notes:
 - Most of the provisioning is down through the Terraform scripts BUT: there minimal setup here required before the provisions starts.
 - The OCI arcade is architected for the Always Free Tier.
+- Oracle Resource Manager downloads the OCI Arcade Terraform scripts from github.com directly hence needing a github personal access token
 
 Pre-Requisites:
 - Ansible installed
@@ -24,3 +25,4 @@ Pre-Requisites:
 - OCI SDK installed and configured to the tenancy
 - Admin privileges to the tenancy
 - OCI Arcade needs 1 x VCN, 2 x VM Compute, 1 Autonomous Database
+- github Personal Access Token
